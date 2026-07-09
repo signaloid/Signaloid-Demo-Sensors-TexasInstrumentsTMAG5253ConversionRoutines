@@ -20,29 +20,27 @@
  *	SOFTWARE.
  */
 
-#pragma once
+#include "kernel.h"
 
-#include "common.h"
 
-typedef struct
+double
+TexasInstrumentsTMAG5253_calculateOutput(double * inputVariables, double *  outputVariables)
 {
-	CommonCommandLineArguments common;
-} CommandLineArguments;
+	double  Vcc;
+	double  Vout;
+	double  Vq;
+	double  calibratedValue;
 
-/**
- *	@brief	Print out command line usage.
- */
-void
-printUsage(void);
+	Vcc     = inputVariables[kTexasInstrumentsTMAG5253InputVariableIndexVcc];
+	Vout    = inputVariables[kTexasInstrumentsTMAG5253InputVariableIndexVout];
 
-/**
- *	@brief	Get command line arguments.
- *
- *	@param	argc		: argument count from main().
- *	@param	argv		: argument vector from main().
- *	@param	arguments	: Pointer to struct to store arguments.
- *	@return			: `kCommonConstantReturnTypeSuccess` if successful,
- *				   else `kCommonConstantReturnTypeError`.
- */
-CommonConstantReturnType
-getCommandLineArguments(int argc, char *  argv[], CommandLineArguments *  arguments);
+	/*
+	 *	For bipolar ("B") variant (TMAG5253BA3), Vq is Vcc/2.
+	 */
+	Vq = Vcc / 2;
+
+	calibratedValue = (Vout - Vq) / (kTexasInstrumentsTMAG5253SensorCalibrationConstantTMAG5253BA3Sensitivity * Vcc / kTexasInstrumentsTMAG5253SensorCalibrationConstantTMAG5253BA3VccNominal);
+	outputVariables[kTexasInstrumentsTMAG5253OutputVariableIndexCalibratedMagneticFluxDensity] = calibratedValue;
+
+	return calibratedValue;
+}

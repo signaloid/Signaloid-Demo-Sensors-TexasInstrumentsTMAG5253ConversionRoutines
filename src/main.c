@@ -1,5 +1,5 @@
 /*
- *	Copyright (c) 2024, Signaloid.
+ *	Copyright (c) 2026, Signaloid.
  *
  *	Permission is hereby granted, free of charge, to any person obtaining a copy
  *	of this software and associated documentation files (the "Software"), to deal
@@ -30,76 +30,49 @@
 #include <uxhw.h>
 #include <string.h>
 #include "utilities.h"
+#include "kernel.h"
 
 /**
- *	@brief  Sets the Input Distributions via call to UxHw Parametric function.
+ *	@brief  Sets the Input Variables via call to UxHw Parametric function.
  *
- *	@param  inputDistributions	: An array of double values, where the function writes
- *					the distributional data.
+ *	@param  inputVariables	: An array of double values, where the function writes the distributional data.
  */
 static void
-setInputDistributionsViaUxHwCall(double *  inputDistributions)
+setInputVariablesViaUxHwCall(double * inputVariables)
 {
-	inputDistributions[kInputDistributionIndexVout] = UxHwDoubleUniformDist(
-								kDefaultInputDistributionVoutUniformDistLow,
-								kDefaultInputDistributionVoutUniformDistHigh);
+	inputVariables[kTexasInstrumentsTMAG5253InputVariableIndexVout] = UxHwDoubleUniformDist(
+		kTexasInstrumentsTMAG5253DefaultInputDistributionVoutUniformDistLow,
+		kTexasInstrumentsTMAG5253DefaultInputDistributionVoutUniformDistHigh
+	);
 
-	inputDistributions[kInputDistributionIndexVcc] = UxHwDoubleUniformDist(
-								kDefaultInputDistributionVccUniformDistLow,
-								kDefaultInputDistributionVccUniformDistHigh);
+	inputVariables[kTexasInstrumentsTMAG5253InputVariableIndexVcc] = UxHwDoubleUniformDist(
+		kTexasInstrumentsTMAG5253DefaultInputDistributionVccUniformDistLow,
+		kTexasInstrumentsTMAG5253DefaultInputDistributionVccUniformDistHigh
+	);
 
 	return;
-}
-
-/**
- *	@brief  Sensor calibration routine taken from Equation 11 in page 15
- *		of tmag5253.pdf, 2024-07-03.
- *
- *	@param  inputDistributions	: The array of input distributions used in the calculation.
- * 	@param  outputDistributions	: An array of of output distributions.
- * 						Writes the result to `outputDistributions[outputSelectValue]`.
- *
- *	@return	double			: Returns the distributional value calculated.
- */
-static double
-calculateSensorOutput(double *  inputDistributions, double *  outputDistributions)
-{
-	double	Vcc;
-	double	Vout;
-	double	Vq;
-	double	calibratedValue;
-
-	Vcc = inputDistributions[kInputDistributionIndexVcc];
-	Vout = inputDistributions[kInputDistributionIndexVout];
-
-	/*
-	 *	For bipolar ("B") variant (TMAG5253BA3), Vq is Vcc/2.
-	 */
-	Vq = Vcc / 2;
-
-	calibratedValue = (Vout - Vq) / (kSensorCalibrationConstantTMAG5253BA3Sensitivity * Vcc / kSensorCalibrationConstantTMAG5253BA3VccNominal);
-	outputDistributions[kOutputDistributionIndexCalibratedMagneticFluxDensity] = calibratedValue;
-
-	return	calibratedValue;
 }
 
 int
 main(int argc, char *  argv[])
 {
-	CommandLineArguments	arguments = {0};
+	CommandLineArguments arguments = { 0 };
 
-	double			calibratedSensorOutput;
-	double *		monteCarloOutputSamples = NULL;
-	clock_t			start;
-	clock_t			end;
-	double			cpuTimeUsedSeconds;
-	double			inputDistributions[kInputDistributionIndexMax];
-	double			outputDistributions[kOutputDistributionIndexMax];
-	const char *		outputVariableNames[kOutputDistributionIndexMax] =
-				{
-					"calibratedSensorOutput"
-				};
-	MeanAndVariance		meanAndVariance;
+	double          calibratedSensorOutput;
+	double *        monteCarloOutputSamples = NULL;
+	clock_t         start;
+	clock_t         end;
+	double          cpuTimeUsedSeconds;
+	double          inputVariables[kTexasInstrumentsTMAG5253InputVariableIndexMax];
+	double          outputVariables[kTexasInstrumentsTMAG5253OutputVariableIndexMax];
+	const char *    outputVariableNames[kTexasInstrumentsTMAG5253OutputVariableIndexMax] = {
+		"calibratedSensorOutput"
+	};
+	const char *    outputVariableDescriptions[kTexasInstrumentsTMAG5253OutputVariableIndexMax] = {
+		"Calibrated Magnetic Flux Density (in mT)"
+	};
+	const char *    applicationDescription = "Texas Instruments TMAG5253 Conversion Routines";
+	MeanAndVariance meanAndVariance;
 
 	/*
 	 *	Get command line arguments.
@@ -112,36 +85,37 @@ main(int argc, char *  argv[])
 	if (arguments.common.isMonteCarloMode)
 	{
 		monteCarloOutputSamples = (double *) checkedMalloc(
-							arguments.common.numberOfMonteCarloIterations * sizeof(double),
-							__FILE__,
-							__LINE__);
+			arguments.common.numberOfMonteCarloIterations * sizeof(double),
+			__FILE__,
+			__LINE__
+		);
 	}
 
 	/*
 	 *	Start timing.
 	 */
-	if (arguments.common.isTimingEnabled || arguments.common.isBenchmarkingMode)
+	if (arguments.common.isTimingEnabled)
 	{
 		start = clock();
 	}
 
-	for (size_t i = 0; i < arguments.common.numberOfMonteCarloIterations; i++)
+	for (size_t ii = 0; ii < arguments.common.numberOfMonteCarloIterations; ii++)
 	{
 		/*
 		 *	Set input distribution values, inside the main computation
 		 *	loop, so that it can also generate samples in the native
 		 *	Monte Carlo Execution Mode.
 		 */
-		setInputDistributionsViaUxHwCall(inputDistributions);
+		setInputVariablesViaUxHwCall(inputVariables);
 
-		calibratedSensorOutput = calculateSensorOutput(inputDistributions, outputDistributions);
+		calibratedSensorOutput = TexasInstrumentsTMAG5253_calculateOutput(inputVariables, outputVariables);
 
 		/*
 		 *	For this application, calibratedSensorOutput is the item we track.
 		 */
 		if (arguments.common.isMonteCarloMode)
 		{
-			monteCarloOutputSamples[i] = calibratedSensorOutput;
+			monteCarloOutputSamples[ii] = calibratedSensorOutput;
 		}
 	}
 
@@ -151,67 +125,66 @@ main(int argc, char *  argv[])
 	 */
 	if (arguments.common.isMonteCarloMode)
 	{
-		meanAndVariance = calculateMeanAndVarianceOfDoubleSamples(monteCarloOutputSamples, arguments.common.numberOfMonteCarloIterations);
-		calibratedSensorOutput = meanAndVariance.mean;
+		meanAndVariance         = calculateMeanAndVarianceOfDoubleSamples(monteCarloOutputSamples, arguments.common.numberOfMonteCarloIterations);
+		calibratedSensorOutput  = meanAndVariance.mean;
 	}
 
 	/*
 	 *	Stop timing.
 	 */
-	if (arguments.common.isTimingEnabled || arguments.common.isBenchmarkingMode)
+	if (arguments.common.isTimingEnabled)
 	{
-		end = clock();
-		cpuTimeUsedSeconds = ((double)(end - start)) / CLOCKS_PER_SEC;
+		end                 = clock();
+		cpuTimeUsedSeconds  = ((double) (end - start)) / CLOCKS_PER_SEC;
 	}
 
-	if (arguments.common.isBenchmarkingMode)
+	/*
+	 *	Print the results (either in JSON or standard output format)
+	 */
+	if (arguments.common.isOutputJSONMode)
 	{
-		/*
-		 *	In benchmarking mode, we print:
-		 *		(1) single result (for calculating Wasserstein distance to reference)
-		 *		(2) time in microseconds (benchmarking setup expects cpu time in microseconds)
-		 */
-		printf("%lf %" PRIu64 "\n", calibratedSensorOutput, (uint64_t)(cpuTimeUsedSeconds*1000000));
+		printJSONFormattedOutput(
+			&arguments.common,
+			monteCarloOutputSamples,
+			outputVariables,
+			outputVariableNames,
+			kTexasInstrumentsTMAG5253OutputVariableIndexMax,
+			applicationDescription
+		);
 	}
 	else
 	{
-		/*
-		 *	Print the results (either in JSON or standard output format)
-		 */
-		if (!arguments.common.isOutputJSONMode)
-		{
-			printCalibratedValueAndProbabilities(calibratedSensorOutput);
-		}
-		else
-		{
-			printJSONFormattedOutput(
-				&arguments,
-				&outputDistributions[kOutputDistributionIndexCalibratedMagneticFluxDensity],
-				monteCarloOutputSamples,
-				outputVariableNames[kOutputDistributionIndexCalibratedMagneticFluxDensity]);
-		}
+		printHumanConsumableOutput(
+			&arguments.common,
+			kTexasInstrumentsTMAG5253OutputVariableIndexMax,
+			outputVariables,
+			outputVariableNames,
+			outputVariableDescriptions,
+			monteCarloOutputSamples
+		);
+	}
 
-		/*
-		 *	Print timing result.
-		 */
-		if (arguments.common.isTimingEnabled)
-		{
-			printf("\nCPU time used: %lf seconds\n", cpuTimeUsedSeconds);
-		}
+	/*
+	 *	Print timing result.
+	 */
+	if (arguments.common.isTimingEnabled)
+	{
+		printf("\nCPU time used: %lf seconds\n", cpuTimeUsedSeconds);
+	}
 
-		/*
-		 *	Write output data.
-		 */
-		if (arguments.common.isWriteToFileEnabled)
-		{
-			if (writeOutputDoubleDistributionsToCSV(
+	/*
+	 *	Write output data.
+	 */
+	if (arguments.common.isWriteToFileEnabled)
+	{
+		if (writeOutputDoubleDistributionsToCSV(
 				arguments.common.outputFilePath,
-				outputDistributions,
+				outputVariables,
 				outputVariableNames,
-				kOutputDistributionIndexMax))
-			{
-				return kCommonConstantReturnTypeError;
-			}
+				kTexasInstrumentsTMAG5253OutputVariableIndexMax
+		))
+		{
+			return kCommonConstantReturnTypeError;
 		}
 	}
 
@@ -221,7 +194,10 @@ main(int argc, char *  argv[])
 	 */
 	if (arguments.common.isMonteCarloMode)
 	{
-		saveMonteCarloDoubleDataToDataDotOutFile(monteCarloOutputSamples, (uint64_t)(cpuTimeUsedSeconds*1000000), arguments.common.numberOfMonteCarloIterations);
+		saveMonteCarloDoubleDataToDataDotOutFile(
+			monteCarloOutputSamples, (uint64_t) (cpuTimeUsedSeconds * 1000000),
+			arguments.common.numberOfMonteCarloIterations
+		);
 
 		free(monteCarloOutputSamples);
 	}
