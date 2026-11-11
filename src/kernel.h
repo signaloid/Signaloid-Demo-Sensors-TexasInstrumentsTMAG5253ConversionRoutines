@@ -1,5 +1,5 @@
 /*
- *	Copyright (c) 2026, Signaloid.
+ *	Copyright (c) 2024-2026, Signaloid.
  *
  *	Permission is hereby granted, free of charge, to any person obtaining a copy
  *	of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,8 @@
  */
 
 #pragma once
+
+#include <stddef.h>
 
 
 /*
@@ -68,3 +70,37 @@ typedef enum
  */
 double
 TexasInstrumentsTMAG5253_calculateOutput(double * inputVariables, double *  outputVariables);
+
+/**
+ *	@brief  Sets the Input Variables via call to UxHw Parametric function.
+ *		In native Monte Carlo mode, each call draws one sample per input variable.
+ *
+ *	@param  inputVariables	: An array of double values, where the function writes the distributional data.
+ */
+void
+TexasInstrumentsTMAG5253SetInputVariablesViaUxHwCall(double * inputVariables);
+
+/**
+ *	@brief	UxHw-mode calculation kernel. Makes a single distributional evaluation.
+ *
+ *	@param	outputVariables	: An array of output variables.
+ *	@return	double		: Returns the distributional value calculated.
+ */
+double
+TexasInstrumentsTMAG5253CalculateOutputUxHw(double * outputVariables);
+
+/**
+ *	@brief	Monte Carlo calculation kernel. Runs
+ *		`numberOfMonteCarloIterations` iterations of the
+ *		calculation and stores one output sample per iteration.
+ *
+ *	@param	numberOfMonteCarloIterations	: Number of Monte Carlo iterations to run.
+ *	@param	outputVariables		: An array of output variables.
+ *	@param	monteCarloOutputSamples	: Array of `numberOfMonteCarloIterations` doubles, filled with samples.
+ *	@return	double			: Returns the output sample of the last iteration.
+ */
+double
+TexasInstrumentsTMAG5253CalculateOutputMonteCarlo(
+	size_t      numberOfMonteCarloIterations,
+	double *    outputVariables,
+	double *    monteCarloOutputSamples);

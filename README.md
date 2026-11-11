@@ -2,7 +2,7 @@
 [<img src="https://assets.signaloid.io/add-to-signaloid-cloud-logo-light-latest.png#gh-light-mode-only" alt="[Add to signaloid.io]" height="30">](https://signaloid.io/repositories?connect=https://github.com/signaloid/Signaloid-Demo-Sensors-TexasInstrumentsTMAG5253ConversionRoutines#gh-light-mode-only)
 
 # Texas Instruments TMAG5253 Sensor Calibration Use Case
-Example demonstating realtime output uncertainty estimation for calibrated ADC values from the TMAG5253 sensor[^1].
+Example demonstrating real-time output distribution arithmetic for calibrated ADC values from the TMAG5253 sensor[^1].
 
 ## Introduction
 The TMAG5253 is a low-power linear Hall effect sensor that responds proportionally to magnetic flux
@@ -43,14 +43,13 @@ In order to compile and run this application in the native Monte Carlo mode:
 ```
 sudo apt-get install libgsl-dev libgslcblas0
 ```
-1. Compile natively (e.g., on Linux):
+1. Compile natively, from the repository root:
 ```
-cd src/
-gcc -I. -I/opt/local/include main.c utilities.c common.c uxhw.c -L/opt/local/lib -o native-exe -lgsl -lgslcblas -lm
+make local-build
 ```
 2. Run the application in the MonteCarlo mode, using (`-M`) command-line option:
 ```
-./native-exe -M 10000
+./demo-native-mc -S 0 -M 10000
 ```
 The above program runs 10000 Monte Carlo iterations.
 
@@ -61,12 +60,12 @@ cat data.out
 
 ## Inputs
 The inputs to the TMAG5253 sensor conversion algorithms are the raw ADC taken from the voltage output of the sensor ($V_{out}$)
-as well as the supply voltage of the sensor ($V_{CC}$). The algorithm models the ADC quantization error as well as the uncertainty
-in the supply voltage using uniform distributions.
+as well as the supply voltage of the sensor ($V_{CC}$). The algorithm models the ADC quantization error as well as the distribution
+of the supply voltage using uniform distributions.
 
-The uncertainty in $V_{out}$ is modeled as a (`UniformDist(2.6, 2.8)`) Volts.
+The distribution of $V_{out}$ is modeled as a (`UniformDist(2.6, 2.8)`) Volts.
 
-The uncertainty in $V_{CC}$ is modeled as a (`UniformDist(3.2, 3.4)`) Volts.
+The distribution of $V_{CC}$ is modeled as a (`UniformDist(3.2, 3.4)`) Volts.
 
 
 ## Outputs
@@ -94,7 +93,6 @@ Usage: Valid command-line arguments are:
 	[-S, --select-output <output : int>] (Compute 0-indexed output, by default 0.)
 	[-M, --multiple-executions <Number of executions : int (Default: 1)>] (Repeated execute kernel for benchmarking.)
 	[-T, --time] (Timing mode: Times and prints the timing of the kernel execution.)
-	[-b, --benchmarking] (Benchmarking mode: Generate outputs in format for benchmarking.)
 	[-j, --json] (Print output in JSON format.)
 	[-h, --help] (Display this help message.)
 ```
