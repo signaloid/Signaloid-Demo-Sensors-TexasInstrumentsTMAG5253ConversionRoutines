@@ -1,15 +1,25 @@
-# Source code:
+# Source Code:
 
-## main.c
-Implementation of the calculation of the calibrated sensor output for TMAG5253 sensor.
+## `main.c`
+Implementation of the main functionality of the application.
 
-## utilities.c/h
+## `kernel.c` and `kernel.h`
+Implementation of the sensor calibration routine and of the compute kernel.
+It dispatches to either the UxHw® or the Monte Carlo implementation below.
+
+## `tmag5253-uxhw.c` and `.h`
+UxHw mode evaluation. It makes a single distributional evaluation of the calibration routine.
+
+## `tmag5253-monte-carlo.c` and `.h`
+Monte Carlo evaluation, used for native runs (`-M`).
+
+## `utilities.c` and `utilities.h`
 These contain utility methods for parsing, setting, and reporting
 the usage of demo-specific command-line arguments of C/C++ demo applications.
 These methods call similar methods from `common.c` for handling
 command-line arguments common to all of our C/C++ demo applications.
 
-## common.c/h
+## `common.c` and `common.h`
 These contain utility methods for parsing, setting, and reporting
 the usage of command-line arguments common to all of our C/C++ demo applications,
 as well as other methods that we commonly make use across our
@@ -18,7 +28,7 @@ source files are symlinks to the original files contained in the repository
 [Signaloid-Demo-CommonUtilityRoutines](https://github.com/signaloid/Signaloid-Demo-CommonUtilityRoutines)
 which is included as a submodule in `submodules/common`.
 
-## uxhw.c/h
+## `uxhw.c` and `uxhw.h`
 These contain methods that implement the probabilistic versions of the methods
 in the UxHw API (e.g., `UxHwDoubleGaussDist`) and uses the GNU Scientific Library (GSL)
 random number generators to achieve that. This allows building our C/C++ demo applications
@@ -28,21 +38,15 @@ These source files are symlinks to the original files and are contained in the r
 [Signaloid-Demo-UxHwCompatibilityForNativeExecution](https://github.com/signaloid/Signaloid-Demo-UxHwCompatibilityForNativeExecution)
 which is included as a submodule in `submodules/compat`.
 
-## utilities-config.h
-Configuration constants and demo-specific definitions.
-
-## config.mk
+## `config.mk`
 Signaloid cores use this file to identify the source codes they will use when
 building the C/C++ demo application.
 
 # To Build Natively on Non-Signaloid Platforms
 
-## On MacOS (with MacPorts)
+From the repository root, build with:
 ```
-gcc -O3 -I. -I/opt/local/include main.c kernel.c utilities.c common.c uxhw.c -L/opt/local/lib -lgsl -lgslcblas
+make local-build
 ```
 
-## On Linux
-```
-gcc -O3 -I. -I/opt/local/include main.c kernel.c utilities.c common.c uxhw.c -L/opt/local/lib -lgsl -lgslcblas -lm
-```
+This produces the native Monte Carlo executable `demo-native-mc` at the repository root.
